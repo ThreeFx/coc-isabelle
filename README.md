@@ -6,6 +6,13 @@ Because PIDE is not my editor.
 
 `:CocInstall coc-isabelle`
 
+## Commands
+
+|Name|Description|
+|----|-----------|
+| `isabelle.openOutput` | Opens the isabelle output window. |
+
+
 ## License
 
 MIT
