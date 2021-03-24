@@ -2,6 +2,27 @@ import {commands, CodeActionProvider, ExtensionContext, LanguageClient, Language
 import {CancellationToken, CodeAction, CodeActionContext, CodeActionKind, Command, Range} from 'vscode-languageserver-protocol';
 import {TextDocument} from 'vscode-languageserver-textdocument';
 
+interface DynamicOutput {
+    content: string,
+}
+
+interface TheoryProgress {
+    finished: number,
+    failed: number,
+    consolidated: boolean,
+    canceled: boolean,
+    terminated: boolean,
+    warned: number,
+    name: string,
+    unprocessed: number,
+    initialized: boolean,
+    running: number,
+}
+
+interface Progress {
+    'nodes-status': TheoryProgress[]
+}
+
 export async function activate(context: ExtensionContext): Promise<void> {
     const config = workspace.getConfiguration('isabelle')
     const isEnabled = config.get<boolean>('enable', true)
@@ -9,13 +30,15 @@ export async function activate(context: ExtensionContext): Promise<void> {
         return
     }
 
+    const extraArgs = config.get<string[]>('extraArgs', [])
     const serverOptions: ServerOptions = {
-        command: 'isabelle',
-        args: ['vscode_server', '-v', '-L', '/tmp/coc-isa'],
+        command: '/home/bfiedler/programming/isabelle-release/bin/isabelle',
+        args: ['vscode_server', '-v', '-L', '/tmp/coc-isa', '-o', 'vscode_pide_extensions'].concat(extraArgs),
     }
 
+    const documentSelector = ['isabelle', 'isabelle-ml']
     const clientOptions: LanguageClientOptions = {
-        documentSelector: ['isabelle'],
+        documentSelector: documentSelector,
         progressOnInitialization: true,
     }
 
@@ -25,10 +48,15 @@ export async function activate(context: ExtensionContext): Promise<void> {
         serverOptions,
         clientOptions,
     )
-    const defaultHandler = client.onNotification
 
-    const isaBuffer = await workspace.nvim.createNewBuffer(false, true)
-    isaBuffer.setName("isabelle-output")
+    const isaOutputBuffer = await workspace.nvim.createNewBuffer(false, true)
+    isaOutputBuffer.setName("isabelle-output")
+
+    const isaStateBuffer = await workspace.nvim.createNewBuffer(false, true)
+    isaStateBuffer.setName("isabelle-state")
+
+    const isaProgressBuffer = await workspace.nvim.createNewBuffer(false, true)
+    isaProgressBuffer.setName("isabelle-progress")
 
     const sendCaretUpdate = (file: string) => {
         window.getCursorPosition().then((pos) => {
@@ -54,7 +82,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
                     for (const method of ['try0', 'try', 'sledgehammer']) {
                         const startcol = line.indexOf(method)
                         if (startcol != -1) {
-                            isaBuffer.getLines({start: 0, end: -1}).then((lines) => {
+                            isaOutputBuffer.getLines({start: 0, end: -1}).then((lines) => {
                                 for (line of lines) {
                                     if (line.startsWith('Try this: ')) {
                                         line = line.replace(/Try this: /, '')
@@ -97,36 +125,64 @@ export async function activate(context: ExtensionContext): Promise<void> {
     )
 
     client.onReady().then(() => {
-        client.onNotification("PIDE/dynamic_output", (params) => {
+        client.onNotification("PIDE/dynamic_output", (params: DynamicOutput) => {
             client.info('got dynamic output')
-            isaBuffer.setLines(params.content.split('\n'), {start: 0, end: -1, strictIndexing: false})
-            defaultHandler("PIDE/dynamic_output", params)
+            isaOutputBuffer.setLines(params.content.split('\n'), {start: 0, end: -1, strictIndexing: false})
+        })
+        client.onNotification("PIDE/progress", (params: Progress) => {
+            client.info('got dynamic output')
+            var lines: string[] = []
+            for (const dict of params['nodes-status']) {
+                // TODO: prettify
+                lines.push(dict.name)
+                const processed = dict.finished + dict.warned
+                const total = processed + dict.unprocessed + dict.running + dict.failed
+                lines.push(`progess: ${processed}/${total}`)
+                lines.push(`failed: ${dict.failed}`)
+                lines.push(`running: ${dict.running}`)
+                lines.push('')
+            }
+            isaProgressBuffer.setLines(lines, {start: 0, end: -1})
         })
         workspace.registerAutocmd({
             event: 'CursorMoved',
             request: true,
             pattern: "*.thy",
-            arglist: ['bufname("%")'],
+            arglist: [`expand('%:p')`],
             callback: sendCaretUpdate,
         })
         workspace.registerAutocmd({
             event: 'CursorMovedI',
             request: true,
             pattern: "*.thy",
-            arglist: ['bufname("%")'],
+            arglist: [`expand('%:p')`],
             callback: sendCaretUpdate,
         })
         workspace.document.then((doc) => doc.buffer.name.then((name) => sendCaretUpdate(name)))
     })
 
     context.subscriptions.push(
-        commands.registerCommand('isabelle.openOutput', () => {
-            workspace.nvim.command('vsplit').then(() => {
-                workspace.nvim.setBuffer(isaBuffer).then(() => {
-                    workspace.nvim.input('Lh')
-                })
-            })
-        }),
+        commands.registerCommand('isabelle.showOutput', () =>
+            workspace.nvim.setBuffer(isaOutputBuffer)
+        ),
+        commands.registerCommand('isabelle.showState', () =>
+            workspace.nvim.setBuffer(isaStateBuffer)
+        ),
+        commands.registerCommand('isabelle.showProgress', () =>
+            workspace.nvim.setBuffer(isaProgressBuffer)
+        ),
+        commands.registerCommand('isabelle.openWindows', () =>
+            workspace.nvim.command('vsplit').then(() =>
+                workspace.nvim.setBuffer(isaProgressBuffer).then(() =>
+                    workspace.nvim.command('split').then(() =>
+                        workspace.nvim.setBuffer(isaOutputBuffer).then(() =>
+                            workspace.nvim.command('split').then(() =>
+                                workspace.nvim.setBuffer(isaStateBuffer).then(() =>
+                                    workspace.nvim.input('lH')))))))),
+
+        commands.registerCommand('isabelle.progressRequest', () =>
+            client.sendNotification('PIDE/progress_request', null)
+        ),
         services.registLanguageClient(client),
     )
 }

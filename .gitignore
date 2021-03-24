@@ -1,3 +1,4 @@
 node_modules/
 *.tgz
 lib/index.js
+lib/index.js.map
