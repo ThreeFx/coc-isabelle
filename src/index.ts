@@ -138,10 +138,3 @@ export async function activate(context: ExtensionContext): Promise<void> {
         services.registLanguageClient(client),
     )
 }
-
-function ensure<T, K extends keyof T>(target: T, key: K): T[K] {
-    if (target[key] == null) {
-        target[key] = {} as any
-    }
-    return target[key]
-}
