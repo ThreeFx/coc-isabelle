@@ -1,5 +1,5 @@
-import {ProviderResult, languages, CodeActionProvider, StaticFeature, workspace, services, ExtensionContext, LanguageClient, LanguageClientOptions, ServerOptions, window} from 'coc.nvim';
-import {Command, Range, CodeActionContext, CancellationToken, ServerCapabilities, DocumentSelector, ClientCapabilities, CodeAction, CodeActionRequest, CodeActionParams, WorkspaceEdit, CodeActionKind} from 'vscode-languageserver-protocol';
+import {CodeActionProvider, ExtensionContext, LanguageClient, LanguageClientOptions, languages, ProviderResult, ServerOptions, services, window, workspace} from 'coc.nvim';
+import {CancellationToken, CodeAction, CodeActionContext, CodeActionKind, Command, Range} from 'vscode-languageserver-protocol';
 import {TextDocument} from 'vscode-languageserver-textdocument';
 
 export async function activate(context: ExtensionContext): Promise<void> {
