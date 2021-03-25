@@ -112,6 +112,10 @@ export async function activate(context: ExtensionContext): Promise<void> {
         [CodeActionKind.Empty, CodeActionKind.QuickFix],
     )
 
+    // We have to use Set<string> because Range is an object and
+    // can only be compared for reference equality
+    let highlightCache = new Map<string, Set<string>>()
+
     client.onReady().then(() => {
         client.onNotification("PIDE/dynamic_output", (params: DynamicOutput) => {
             client.info('got dynamic output')
@@ -120,26 +124,52 @@ export async function activate(context: ExtensionContext): Promise<void> {
         client.onNotification("PIDE/decoration", (params: DecorationParams) => {
             client.info('got decoration request')
             workspace.nvim.buffer.then((buf) => {
+                // Create cached set if it does not exist
+                if (!highlightCache.has(params.type)) {
+                    highlightCache.set(params.type, new Set<string>())
+                }
+                const set = highlightCache.get(params.type)!
+
                 if (params.content.length == 0) {
                     buf.clearNamespace(params.type, 0, -1)
                 } else {
-                    client.info(`higlighting with: ${toVimHighlightGroup(params.type)}`)
+                    let toClear = new Set<string>()
+                    let newSet = new Set<string>()
+                    let toAdd: Range[] = []
+                    for (const x of params.content) {
+                        let r = <Range>{
+                            start: {line: x.range[0], character: x.range[1]},
+                            end: {line: x.range[2], character: x.range[3]},
+                        }
+                        let rs = `${r.start.line}:${r.start.character}:${r.end.line}:${r.end.character}`
+
+                        newSet.add(rs)
+                        if (!set.has(rs)) {
+                            toAdd.push(r)
+                            toClear.add(`${r.start.line}:${r.end.line}`)
+                        }
+                    }
+                    highlightCache.set(params.type, newSet)
+
+                    const stillHighlighted: string[] = [...set].filter(range => !newSet.has(range))
+                    for (const range of stillHighlighted) {
+                        let [start,_startcol,end,_endcol] = range.split(':')
+                        toClear.add(`${start}:${end}`)
+                    }
+
+                    for (const range of toClear) {
+                        let [start, end] = range.split(':')
+                        buf.clearNamespace(params.type, parseInt(start), parseInt(end))
+                    }
+
                     buf.highlightRanges(
                         params.type,
                         // TODO: define sensible colors
                         // TODO: find out how to package the syntax.vim file
                         toVimHighlightGroup(params.type),
-                        params.content.map(x => <Range>{
-                            start: {
-                                line: x.range[0],
-                                character: x.range[1],
-                            },
-                            end: {
-                                line: x.range[2],
-                                character: x.range[3],
-                            },
-                        })
+                        toAdd,
                     )
+                    client.info(`highlighted with: ${toVimHighlightGroup(params.type)}`)
                 }
             })
         })
@@ -199,6 +229,10 @@ export async function activate(context: ExtensionContext): Promise<void> {
         ),
         services.registLanguageClient(client),
     )
+
+    if (config.get<boolean>('openIsabelleWindowsAtStartup')) {
+        workspace.nvim.command(':CocCommand isabelle.openWindows')
+    }
 }
 
 function toVimHighlightGroup(isaHighlightGroup: string): string {
