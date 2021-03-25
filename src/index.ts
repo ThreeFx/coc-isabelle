@@ -2,27 +2,6 @@ import {commands, CodeActionProvider, ExtensionContext, LanguageClient, Language
 import {CancellationToken, CodeAction, CodeActionContext, CodeActionKind, Command, Range} from 'vscode-languageserver-protocol';
 import {TextDocument} from 'vscode-languageserver-textdocument';
 
-interface DynamicOutput {
-    content: string,
-}
-
-interface TheoryProgress {
-    finished: number,
-    failed: number,
-    consolidated: boolean,
-    canceled: boolean,
-    terminated: boolean,
-    warned: number,
-    name: string,
-    unprocessed: number,
-    initialized: boolean,
-    running: number,
-}
-
-interface Progress {
-    'nodes-status': TheoryProgress[]
-}
-
 export async function activate(context: ExtensionContext): Promise<void> {
     const config = workspace.getConfiguration('isabelle')
     const isEnabled = config.get<boolean>('enable', true)
@@ -31,9 +10,18 @@ export async function activate(context: ExtensionContext): Promise<void> {
     }
 
     const extraArgs = config.get<string[]>('extraArgs', [])
+
+    if (config.get<boolean>('usePideExtensions', true)) {
+        extraArgs.push('-o', 'vscode_pide_extensions')
+    }
+
+    if (config.get<boolean>('debug', false)) {
+        extraArgs.push('-v', '-L', '/tmp/coc-isa')
+    }
+
     const serverOptions: ServerOptions = {
         command: '/home/bfiedler/programming/isabelle-release/bin/isabelle',
-        args: ['vscode_server', '-v', '-L', '/tmp/coc-isa', '-o', 'vscode_pide_extensions'].concat(extraArgs),
+        args: ['vscode_server'].concat(extraArgs),
     }
 
     const documentSelector = ['isabelle', 'isabelle-ml']
@@ -129,6 +117,32 @@ export async function activate(context: ExtensionContext): Promise<void> {
             client.info('got dynamic output')
             isaOutputBuffer.setLines(params.content.split('\n'), {start: 0, end: -1, strictIndexing: false})
         })
+        client.onNotification("PIDE/decoration", (params: DecorationParams) => {
+            client.info('got decoration request')
+            workspace.nvim.buffer.then((buf) => {
+                if (params.content.length == 0) {
+                    buf.clearNamespace(params.type, 0, -1)
+                } else {
+                    client.info(`higlighting with: ${toVimHighlightGroup(params.type)}`)
+                    buf.highlightRanges(
+                        params.type,
+                        // TODO: define sensible colors
+                        // TODO: find out how to package the syntax.vim file
+                        toVimHighlightGroup(params.type),
+                        params.content.map(x => <Range>{
+                            start: {
+                                line: x.range[0],
+                                character: x.range[1],
+                            },
+                            end: {
+                                line: x.range[2],
+                                character: x.range[3],
+                            },
+                        })
+                    )
+                }
+            })
+        })
         client.onNotification("PIDE/progress", (params: Progress) => {
             client.info('got dynamic output')
             var lines: string[] = []
@@ -185,4 +199,11 @@ export async function activate(context: ExtensionContext): Promise<void> {
         ),
         services.registLanguageClient(client),
     )
+}
+
+function toVimHighlightGroup(isaHighlightGroup: string): string {
+    return 'IsaDecoration' + isaHighlightGroup
+        .replace(/^[a-z]/, letter => letter.toUpperCase())
+        .replace(/_[a-z]/g, letter => letter.toUpperCase())
+        .replace('_', '')
 }

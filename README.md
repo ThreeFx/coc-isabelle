@@ -13,6 +13,15 @@ version, you are invited to use my [earlier Go-based
 version](https://github.com/ThreeFx/isabelle-lsp). Note that it is still
 neovim-exclusive.
 
+## Configuration
+
+|Name|Type|Description|
+|----|----|-----------|
+| `isabelle.enable` | boolean | En/disables coc-isabelle. Requires a restart if changed |
+| `isabelle.usePideExtensions` | boolean | Whether to use the VSCode PIDE extensions. This is used mainly to get good syntax highlighting of ML code. |
+| `isabelle.debug` | boolean | Produce debug output. The output of the language server can be found under `/tmp/coc-isa`. |
+| `isabelle.extraArgs` | string[] | Additional arguments to pass to the underlying `isabelle` process. |
+
 ## Commands
 
 |Name|Description|
