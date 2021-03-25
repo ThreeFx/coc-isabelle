@@ -20,7 +20,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
     }
 
     const serverOptions: ServerOptions = {
-        command: '/home/bfiedler/programming/isabelle-release/bin/isabelle',
+        command: config.get<string>('command', 'isabelle'),
         args: ['vscode_server'].concat(extraArgs),
     }
 

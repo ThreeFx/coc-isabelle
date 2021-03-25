@@ -18,6 +18,7 @@ neovim-exclusive.
 |Name|Type|Description|
 |----|----|-----------|
 | `isabelle.enable` | boolean | En/disables coc-isabelle. Requires a restart if changed |
+| `isabelle.command` | boolean | The `isabelle` command to invoke. |
 | `isabelle.usePideExtensions` | boolean | Whether to use the VSCode PIDE extensions. This is used mainly to get good syntax highlighting of ML code. |
 | `isabelle.debug` | boolean | Produce debug output. The output of the language server can be found under `/tmp/coc-isa`. |
 | `isabelle.extraArgs` | string[] | Additional arguments to pass to the underlying `isabelle` process. |
