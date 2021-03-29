@@ -114,9 +114,10 @@ export async function activate(context: ExtensionContext): Promise<void> {
                     return []
                 }
 
+                const expr: string = line.replace(/proof *\(([^)]*)\)/, '$1')
                 lines.splice(0, ind+1)
                 const action: CodeAction = {
-                    title: `Insert proof outline`,
+                    title: `Insert proof outline for \`${expr}\` `,
                     kind: CodeActionKind.QuickFix,
                     edit: {
                         documentChanges: [{
