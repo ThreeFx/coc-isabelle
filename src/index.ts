@@ -56,54 +56,86 @@ export async function activate(context: ExtensionContext): Promise<void> {
     }
 
     let isabelleCodeActionProvider = <CodeActionProvider>{
-        provideCodeActions: (
+        provideCodeActions: async (
             document: TextDocument,
             range: Range,
             _context: CodeActionContext,
             _token: CancellationToken
-        ): ProviderResult<(Command | CodeAction)[]> => {
+        ): Promise<ProviderResult<(Command | CodeAction)[]>> => {
             client.info('code action provider called')
             if (range.start.line != range.end.line) {
                 return null
             }
             const linenr = range.start.line
-            return new Promise<(Command | CodeAction)[]>(resolve => {
-                workspace.nvim.line.then(line => {
-                    for (const method of ['try0', 'try', 'sledgehammer']) {
-                        const startcol = line.indexOf(method)
-                        if (startcol != -1) {
-                            isaOutputBuffer.getLines({start: 0, end: -1}).then((lines) => {
-                                for (line of lines) {
-                                    if (line.startsWith('Try this: ')) {
-                                        line = line.replace(/Try this: /, '')
-                                        line = line.replace(/\([0-9]+ ms\)/, '')
-                                        const action: CodeAction = {
-                                            title: `Replace ${method} with ${line}`,
-                                            kind: CodeActionKind.QuickFix,
-                                            edit: {
-                                                documentChanges: [{
-                                                    textDocument: {
-                                                        uri: document.uri,
-                                                        version: null,
-                                                    },
-                                                    edits: [{
-                                                        newText: line,
-                                                        range: {
-                                                            start: {line: linenr, character: startcol},
-                                                            end: {line: linenr, character: startcol + method.length},
-                                                        },
-                                                    }],
-                                                }],
+            var line = await workspace.nvim.line
+            let lines = await isaOutputBuffer.getLines({start: 0, end: -1})
+            for (const method of ['try0', 'try', 'sledgehammer']) {
+                const startcol = line.indexOf(method)
+                if (startcol != -1) {
+                    for (line of lines) {
+                        if (line.startsWith('Try this: ')) {
+                            line = line.replace(/Try this: /, '')
+                            line = line.replace(/\([0-9]+ ms\)/, '')
+                            const action: CodeAction = {
+                                title: `Replace ${method} with ${line}`,
+                                kind: CodeActionKind.QuickFix,
+                                edit: {
+                                    documentChanges: [{
+                                        textDocument: {
+                                            uri: document.uri,
+                                            version: null,
+                                        },
+                                        edits: [{
+                                            newText: line,
+                                            range: {
+                                                start: {line: linenr, character: startcol},
+                                                end: {line: linenr, character: startcol + method.length},
                                             },
-                                        }
-                                        resolve([action])
-                                    }
-                                }
-                            })
+                                        }],
+                                    }],
+                                },
+                            }
+                            return [action]
                         }
                     }
-                })
-            })
+                }
+            }
+
+            if (line.includes('proof')) {
+                var ind = -1
+                for (const [i, l] of lines.entries()) {
+                    if (l === 'Proof outline with cases:') {
+                        ind = i
+                        break
+                    }
+                }
+
+                if (ind == -1) {
+                    return []
+                }
+
+                lines.splice(0, ind+1)
+                const action: CodeAction = {
+                    title: `Insert proof outline`,
+                    kind: CodeActionKind.QuickFix,
+                    edit: {
+                        documentChanges: [{
+                            textDocument: {
+                                uri: document.uri,
+                                version: null,
+                            },
+                            edits: [{
+                                newText: lines.join('\n'),
+                                range: {
+                                    start: {line: linenr+1, character: 0},
+                                    end: {line: linenr+1, character: 0},
+                                },
+                            }],
+                        }],
+                    },
+                }
+                return [action]
+            }
         }
     }
 
