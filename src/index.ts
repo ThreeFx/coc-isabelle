@@ -114,10 +114,11 @@ export async function activate(context: ExtensionContext): Promise<void> {
                     return []
                 }
 
-                const expr: string = line.replace(/proof *\(([^)]*)\)/, '$1')
                 lines.splice(0, ind+1)
+                const whitesp = line.search(/\S/);
+                const expr: string = line.replace(/\s*proof\s*(\([^)]*\))/, '$1')
                 const action: CodeAction = {
-                    title: `Insert proof outline for \`${expr}\` `,
+                    title: `Insert proof outline for ${expr} `,
                     kind: CodeActionKind.QuickFix,
                     edit: {
                         documentChanges: [{
@@ -126,7 +127,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
                                 version: null,
                             },
                             edits: [{
-                                newText: lines.join('\n'),
+                                newText: lines.map((x) => ' '.repeat(whitesp) + x).join('\n'),
                                 range: {
                                     start: {line: linenr+1, character: 0},
                                     end: {line: linenr+1, character: 0},
