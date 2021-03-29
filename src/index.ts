@@ -45,8 +45,8 @@ export async function activate(context: ExtensionContext): Promise<void> {
 
     const isaProgressBufferNr = await workspace.nvim.call('bufnr', ['-PROGRESS-'])
     const isaProgressBuffer = workspace.nvim.createBuffer(parseInt(isaProgressBufferNr))
-    //const isaProgressBufferWinNr = await workspace.nvim.call('winbufnr', [isaProgressBufferNr]).catch(client.error)
-    //const isaProgressBufferWidth = await workspace.nvim.createWindow(parseInt(isaProgressBufferWinNr)).width.catch(client.error)
+    const isaProgressBufferWidth = (await workspace.nvim.getVar('isabelle_progress_width') as number) ?? 40
+    client.info(`width: ${await workspace.nvim.getVar('isabelle_progress_width')}`)
 
     const sendCaretUpdate = (file: string) => {
         window.getCursorPosition().then((pos) => {
@@ -191,11 +191,12 @@ export async function activate(context: ExtensionContext): Promise<void> {
                 lines.push(name)
                 const processed = dict.finished + dict.warned
                 const total = processed + dict.unprocessed + dict.running + dict.failed
-                const width = 40 - 8
+                const width = isaProgressBufferWidth - 8
                 const numDone = Math.floor(processed * width / total)
                 const numOther = width - numDone
                 lines.push(` [${'#'.repeat(numDone)}${' '.repeat(numOther)}] `)
                 let curline = 2*i
+
                 if (dict.failed > 0) {
                     errorRanges.push({
                         start: {
@@ -235,6 +236,11 @@ export async function activate(context: ExtensionContext): Promise<void> {
             pattern: "*.thy",
             arglist: [`expand('%:p')`],
             callback: sendCaretUpdate,
+        })
+        workspace.registerAutocmd({
+            event: 'CursorHold',
+            pattern: "*.thy",
+            callback: () => client.sendNotification('PIDE/progress_request', null),
         })
         workspace.document.then((doc) => doc.buffer.name.then((name) => sendCaretUpdate(name)))
     })
