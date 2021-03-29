@@ -8,6 +8,10 @@ This plugin (sadly) only works together with [neovim](https://neovim.io) and
 [`coc.nvim`](https://github.com/neoclide/coc.nvim). Install it using
 `:CocInstall coc-isabelle` as usual.
 
+Syntax highlighting is provided by
+[`isabelle.vim`](https://github.com/ThreeFx/isabelle.vim). Install it using your
+favorite (vim) package manager.
+
 If you are looking for a (far less feature-complete) and even more alpha
 version, you are invited to use my [earlier Go-based
 version](https://github.com/ThreeFx/isabelle-lsp). Note that it is still
