@@ -122,8 +122,8 @@ export async function activate(context: ExtensionContext): Promise<void> {
             isaOutputBuffer.setLines(params.content.split('\n'), {start: 0, end: -1, strictIndexing: false})
         })
         client.onNotification("PIDE/decoration", (params: DecorationParams) => {
-            client.info('got decoration request')
             workspace.nvim.buffer.then((buf) => {
+                client.info('got decoration request')
                 // Create cached set if it does not exist
                 if (!highlightCache.has(params.type)) {
                     highlightCache.set(params.type, new Set<string>())
@@ -132,6 +132,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
 
                 if (params.content.length == 0) {
                     buf.clearNamespace(params.type, 0, -1)
+                    client.info(`cleared group ${toVimHighlightGroup(params.type)}`)
                 } else {
                     let toClear = new Set<string>()
                     let newSet = new Set<string>()
@@ -159,7 +160,9 @@ export async function activate(context: ExtensionContext): Promise<void> {
 
                     for (const range of toClear) {
                         let [start, end] = range.split(':')
-                        buf.clearNamespace(params.type, parseInt(start), parseInt(end))
+                        let nvim_start = parseInt(start)
+                        let nvim_end = parseInt(end) + 1  // end is exclusive
+                        buf.clearNamespace(params.type, nvim_start, nvim_end)
                     }
 
                     buf.highlightRanges(
