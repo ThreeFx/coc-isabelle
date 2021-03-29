@@ -1,55 +1,52 @@
-hi default link IsaDecorationBackgroundIntensify Normal
-hi default link IsaDecorationBackgroundQuoted Normal
-hi default link IsaDecorationBackgroundAntiquoted Normal
-hi default link IsaDecorationBackgroundMarkdownBullet1 Normal
-hi default link IsaDecorationBackgroundMarkdownBullet2 Normal
-hi default link IsaDecorationBackgroundMarkdownBullet3 Normal
-hi default link IsaDecorationBackgroundMarkdownBullet4 Normal
-hi default link IsaDecorationForegroundQuoted Normal
-hi default link IsaDecorationForegroundAntiquoted Normal
+" These colors were taken from the light mode colors of the official
+" extension.
 
-" Alacritty (my terminal emulator of choice) does not have support
-" for undercurl yet.
-"
-" https://github.com/alacritty/alacritty/pull/4660
-hi default IsaDecorationDottedWriteln cterm=underline
-hi default IsaDecorationDottedInformation cterm=underline
-hi default IsaDecorationDottedWarning cterm=underline
+hi default IsaDecorationBackgroundUnprocessed ctermbg=217
+hi default IsaDecorationBackgroundUnprocessed1 ctermbg=217
+hi default IsaDecorationBackgroundRunning ctermbg=53
+hi default IsaDecorationBackgroundRunning1 ctermbg=53
+hi default IsaDecorationBackgroundCanceled ctermbg=203
+hi default IsaDecorationBackgroundBad ctermbg=203
+hi default IsaDecorationBackgroundIntensify ctermbg=221
+hi default IsaDecorationBackgroundMarkdownBullet1 ctermbg=194
+hi default IsaDecorationBackgroundMarkdownBullet2 ctermbg=230
+hi default IsaDecorationBackgroundMarkdownBullet3 ctermbg=189
+hi default IsaDecorationBackgroundMarkdownBullet4 ctermbg=225
+hi default IsaDecorationForegroundQuoted ctermbg=254
+hi default IsaDecorationForegroundAntiquoted ctermbg=221
+hi default IsaDecorationDottedWriteln ctermfg=145 cterm=underline
+hi default IsaDecorationDottedInformation ctermfg=153 cterm=underline
+hi default IsaDecorationDottedWarning ctermfg=208 cterm=underline
+hi default IsaDecorationTextError ctermfg=124
+hi default IsaDecorationTextSpellChecker ctermfg=21
+hi default IsaDecorationTextMain ctermfg=16
+hi default IsaDecorationTextKeyword1 ctermfg=128
+hi default IsaDecorationTextKeyword2 ctermfg=29
+hi default IsaDecorationTextKeyword3 ctermfg=30
+hi default IsaDecorationTextQuasiKeyword ctermfg=99
+hi default IsaDecorationTextImproper ctermfg=167
+hi default IsaDecorationTextOperator ctermfg=59
+hi default IsaDecorationTextTfree ctermfg=129
+hi default IsaDecorationTextTvar ctermfg=129
+hi default IsaDecorationTextFree ctermfg=21
+hi default IsaDecorationTextSkolem ctermfg=166
+hi default IsaDecorationTextBound ctermfg=28
+hi default IsaDecorationTextVar ctermfg=18
+hi default IsaDecorationTextInnerNumeral ctermfg=29
+hi default IsaDecorationTextInnerQuoted ctermfg=124
+hi default IsaDecorationTextInnerCartouche ctermfg=89
+hi default IsaDecorationTextInnerComment ctermfg=28
+hi default IsaDecorationTextComment1 ctermfg=89
+hi default IsaDecorationTextComment2 ctermfg=167
+hi default IsaDecorationTextComment3 ctermfg=28
+hi default IsaDecorationTextDynamic ctermfg=94
+hi default IsaDecorationTextClassParameter ctermfg=166
+hi default IsaDecorationTextAntiquote ctermfg=56
+hi default IsaDecorationTextRawText ctermfg=56
+hi default IsaDecorationTextPlainText ctermfg=56
 
-" PIDE also displays this as strings, so I think this is ok
-hi default IsaDecorationTextMain ctermfg=237 ctermbg=254
-
-hi default link IsaDecorationTextKeyword1 Normal
-hi default IsaDecorationTextKeyword2 cterm=bold ctermfg=70
-hi default link IsaDecorationTextKeyword3 Normal
-
-hi default link IsaDecorationTextQuasiKeyword Keyword
-hi default link IsaDecorationTextImproper Normal
-hi default link IsaDecorationTextOperator Keyword
-hi default link IsaDecorationTextTfree Normal
-hi default link IsaDecorationTextTvar Normal
-hi default IsaDecorationTextFree ctermfg=21 ctermbg=254
-hi default IsaDecorationTextSkolem ctermfg=179
-hi default IsaDecorationTextBound ctermfg=28 ctermbg=254
-hi default link IsaDecorationTextVar Identifier
-hi default link IsaDecorationTextInnerNumeral Number
-hi default link IsaDecorationTextInnerQuoted Normal
-hi default link IsaDecorationTextInnerCartouche Normal
-hi default link IsaDecorationTextInnerComment Comment
-hi default link IsaDecorationTextDynamic Normal
-hi default link IsaDecorationTextClassParameter Normal
-hi default link IsaDecorationTextAntiquote Normal
-
-
-" Emulate PIDE colors here
-hi default IsaDecorationBackgroundUnprocessed1 ctermbg=223
-hi default IsaDecorationTextOverviewUnprocessed ctermbg=223
-hi default IsaDecorationBackgroundRunning1 ctermbg=105
-hi default IsaDecorationTextOverviewRunning ctermbg=105
-
-
-hi default IsaDecorationTextOverviewError ctermbg=202
-hi default IsaDecorationBackgroundBad ctermbg=202
-
-hi default link IsaDecorationTextOverviewWarning ctermbg=179
-hi default link IsaDecorationSpellChecker Normal
+"TODO: Overview colors
+"hi default IsaDecorationTextOverviewUnprocessed ctermfg=217
+"hi default IsaDecorationTextOverviewRunning ctermfg=53
+"hi default IsaDecorationTextOverviewError ctermfg=124
+"hi default IsaDecorationTextOverviewWarning ctermfg=208
