@@ -37,14 +37,16 @@ export async function activate(context: ExtensionContext): Promise<void> {
         clientOptions,
     )
 
-    const isaOutputBuffer = await workspace.nvim.createNewBuffer(false, true)
-    isaOutputBuffer.setName("isabelle-output")
+    const isaOutputBufferNr = await workspace.nvim.call('bufnr', ['-OUTPUT-'])
+    const isaOutputBuffer = workspace.nvim.createBuffer(parseInt(isaOutputBufferNr))
 
     const isaStateBuffer = await workspace.nvim.createNewBuffer(false, true)
-    isaStateBuffer.setName("isabelle-state")
+    isaStateBuffer.setName("-STATE-")
 
-    const isaProgressBuffer = await workspace.nvim.createNewBuffer(false, true)
-    isaProgressBuffer.setName("isabelle-progress")
+    const isaProgressBufferNr = await workspace.nvim.call('bufnr', ['-PROGRESS-'])
+    const isaProgressBuffer = workspace.nvim.createBuffer(parseInt(isaProgressBufferNr))
+    //const isaProgressBufferWinNr = await workspace.nvim.call('winbufnr', [isaProgressBufferNr]).catch(client.error)
+    //const isaProgressBufferWidth = await workspace.nvim.createWindow(parseInt(isaProgressBufferWinNr)).width.catch(client.error)
 
     const sendCaretUpdate = (file: string) => {
         window.getCursorPosition().then((pos) => {
@@ -122,7 +124,9 @@ export async function activate(context: ExtensionContext): Promise<void> {
             isaOutputBuffer.setLines(params.content.split('\n'), {start: 0, end: -1, strictIndexing: false})
         })
         client.onNotification("PIDE/decoration", (params: DecorationParams) => {
-            workspace.nvim.buffer.then((buf) => {
+            client.sendNotification('PIDE/progress_request', null)
+            workspace.nvim.call('bufnr', [params.uri.split('/').pop() ?? '']).then((bufnr) => {
+                const buf = workspace.nvim.createBuffer(parseInt(bufnr))
                 client.info('got decoration request')
                 // Create cached set if it does not exist
                 if (!highlightCache.has(params.type)) {
@@ -154,7 +158,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
 
                     const stillHighlighted: string[] = [...set].filter(range => !newSet.has(range))
                     for (const range of stillHighlighted) {
-                        let [start,_startcol,end,_endcol] = range.split(':')
+                        let [start, _startcol, end, _endcol] = range.split(':')
                         toClear.add(`${start}:${end}`)
                     }
 
@@ -179,28 +183,55 @@ export async function activate(context: ExtensionContext): Promise<void> {
         client.onNotification("PIDE/progress", (params: Progress) => {
             client.info('got dynamic output')
             var lines: string[] = []
-            for (const dict of params['nodes-status']) {
+            var errorRanges: Range[] = []
+            var doneRanges: Range[] = []
+            for (const [i, dict] of params['nodes-status'].entries()) {
                 // TODO: prettify
-                lines.push(dict.name)
+                const name = dict.name.split(/[\\/]/).pop()?.split('.')[0] ?? 'undefined'
+                lines.push(name)
                 const processed = dict.finished + dict.warned
                 const total = processed + dict.unprocessed + dict.running + dict.failed
-                lines.push(`progess: ${processed}/${total}`)
-                lines.push(`failed: ${dict.failed}`)
-                lines.push(`running: ${dict.running}`)
-                lines.push('')
+                const width = 40 - 8
+                const numDone = Math.floor(processed * width / total)
+                const numOther = width - numDone
+                lines.push(` [${'#'.repeat(numDone)}${' '.repeat(numOther)}] `)
+                let curline = 2*i
+                if (dict.failed > 0) {
+                    errorRanges.push({
+                        start: {
+                            line: curline,
+                            character: 0,
+                        },
+                        end: {
+                            line: curline+2,
+                            character: 0,
+                        }
+                    })
+                } else if (processed == total) {
+                    doneRanges.push({
+                        start: {
+                            line: curline,
+                            character: 0,
+                        },
+                        end: {
+                            line: curline+2,
+                            character: 0,
+                        }
+                    })
+                }
             }
             isaProgressBuffer.setLines(lines, {start: 0, end: -1})
+            isaProgressBuffer.highlightRanges('-PROGRESS-', 'CocListFgRed', errorRanges)
+            isaProgressBuffer.highlightRanges('-PROGRESS-', 'CocListFgGreen', doneRanges)
         })
         workspace.registerAutocmd({
             event: 'CursorMoved',
-            request: true,
             pattern: "*.thy",
             arglist: [`expand('%:p')`],
             callback: sendCaretUpdate,
         })
         workspace.registerAutocmd({
             event: 'CursorMovedI',
-            request: true,
             pattern: "*.thy",
             arglist: [`expand('%:p')`],
             callback: sendCaretUpdate,
@@ -210,32 +241,20 @@ export async function activate(context: ExtensionContext): Promise<void> {
 
     context.subscriptions.push(
         commands.registerCommand('isabelle.showOutput', () =>
-            workspace.nvim.setBuffer(isaOutputBuffer)
+            workspace.nvim.command('wincmd j|b -OUTPUT-|wincmd k'),
         ),
         commands.registerCommand('isabelle.showState', () =>
-            workspace.nvim.setBuffer(isaStateBuffer)
+            workspace.nvim.command('wincmd j|b -STATE-|wincmd k'),
         ),
         commands.registerCommand('isabelle.showProgress', () =>
-            workspace.nvim.setBuffer(isaProgressBuffer)
+            workspace.nvim.command('wincmd j|b -PROGRESS-|wincmd k'),
         ),
-        commands.registerCommand('isabelle.openWindows', () =>
-            workspace.nvim.command('vsplit').then(() =>
-                workspace.nvim.setBuffer(isaProgressBuffer).then(() =>
-                    workspace.nvim.command('split').then(() =>
-                        workspace.nvim.setBuffer(isaOutputBuffer).then(() =>
-                            workspace.nvim.command('split').then(() =>
-                                workspace.nvim.setBuffer(isaStateBuffer).then(() =>
-                                    workspace.nvim.input('lH')))))))),
 
         commands.registerCommand('isabelle.progressRequest', () =>
             client.sendNotification('PIDE/progress_request', null)
         ),
         services.registLanguageClient(client),
     )
-
-    if (config.get<boolean>('openIsabelleWindowsAtStartup')) {
-        workspace.nvim.command(':CocCommand isabelle.openWindows')
-    }
 }
 
 function toVimHighlightGroup(isaHighlightGroup: string): string {
