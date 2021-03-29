@@ -71,12 +71,13 @@ export async function activate(context: ExtensionContext): Promise<void> {
             let lines = await isaOutputBuffer.getLines({start: 0, end: -1})
             for (const method of ['try0', 'try', 'sledgehammer']) {
                 const startcol = line.indexOf(method)
+                var actions: CodeAction[] = []
                 if (startcol != -1) {
                     for (line of lines) {
                         if (line.startsWith('Try this: ')) {
                             line = line.replace(/Try this: /, '')
                             line = line.replace(/\([0-9]+ ms\)/, '')
-                            const action: CodeAction = {
+                            actions.push(<CodeAction>{
                                 title: `Replace ${method} with ${line}`,
                                 kind: CodeActionKind.QuickFix,
                                 edit: {
@@ -94,10 +95,32 @@ export async function activate(context: ExtensionContext): Promise<void> {
                                         }],
                                     }],
                                 },
-                            }
-                            return [action]
+                            })
+                        } else if (line.includes('Try this:')) {
+                            const prover = line.replace(/"([a-zA-Z0-9]*)":.*/, '$1')
+                            line = line.replace(/.*Try this: /, '')
+                            actions.push(<CodeAction>{
+                                title: `${prover}: ${line}`,
+                                kind: CodeActionKind.Empty,
+                                edit: {
+                                    documentChanges: [{
+                                        textDocument: {
+                                            uri: document.uri,
+                                            version: null,
+                                        },
+                                        edits: [{
+                                            newText: line.replace(/\([0-9]+ ms\)/, ''),
+                                            range: {
+                                                start: {line: linenr, character: startcol},
+                                                end: {line: linenr, character: startcol + method.length},
+                                            },
+                                        }],
+                                    }],
+                                },
+                            })
                         }
                     }
+                    return actions
                 }
             }
 
@@ -114,11 +137,11 @@ export async function activate(context: ExtensionContext): Promise<void> {
                     return []
                 }
 
-                lines.splice(0, ind+1)
+                lines.splice(0, ind + 1)
                 const whitesp = line.search(/\S/);
                 const expr: string = line.replace(/\s*proof\s*(\([^)]*\))/, '$1')
                 const action: CodeAction = {
-                    title: `Insert proof outline for ${expr} `,
+                    title: `Insert proof outline for ${expr}`,
                     kind: CodeActionKind.QuickFix,
                     edit: {
                         documentChanges: [{
@@ -129,8 +152,8 @@ export async function activate(context: ExtensionContext): Promise<void> {
                             edits: [{
                                 newText: lines.map((x) => ' '.repeat(whitesp) + x).join('\n'),
                                 range: {
-                                    start: {line: linenr+1, character: 0},
-                                    end: {line: linenr+1, character: 0},
+                                    start: {line: linenr + 1, character: 0},
+                                    end: {line: linenr + 1, character: 0},
                                 },
                             }],
                         }],
@@ -229,7 +252,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
                 const numDone = Math.floor(processed * width / total)
                 const numOther = width - numDone
                 lines.push(` [${'#'.repeat(numDone)}${' '.repeat(numOther)}] `)
-                let curline = 2*i
+                let curline = 2 * i
 
                 if (dict.failed > 0) {
                     errorRanges.push({
@@ -238,7 +261,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
                             character: 0,
                         },
                         end: {
-                            line: curline+2,
+                            line: curline + 2,
                             character: 0,
                         }
                     })
@@ -249,7 +272,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
                             character: 0,
                         },
                         end: {
-                            line: curline+2,
+                            line: curline + 2,
                             character: 0,
                         }
                     })
