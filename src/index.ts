@@ -9,7 +9,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
         return
     }
 
-    const extraArgs = config.get<string[]>('extraArgs', [])
+    const extraArgs = config.get<string[]>('extraArgs', []).slice()
 
     if (config.get<boolean>('usePideExtensions', true)) {
         extraArgs.push('-o', 'vscode_pide_extensions')
@@ -36,6 +36,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
         serverOptions,
         clientOptions,
     )
+    client.info(`args: ${serverOptions.args ?? []}`)
 
     const isaOutputBufferNr = await workspace.nvim.call('bufnr', ['-OUTPUT-'])
     const isaOutputBuffer = workspace.nvim.createBuffer(parseInt(isaOutputBufferNr))
@@ -67,64 +68,62 @@ export async function activate(context: ExtensionContext): Promise<void> {
                 return null
             }
             const linenr = range.start.line
-            var line = await workspace.nvim.line
+            var editorLine = await workspace.nvim.line
             let lines = await isaOutputBuffer.getLines({start: 0, end: -1})
             for (const method of ['try0', 'try', 'sledgehammer']) {
-                const startcol = line.indexOf(method)
+                const startcol = editorLine.indexOf(method)
                 var actions: CodeAction[] = []
+
                 if (startcol != -1) {
-                    for (line of lines) {
+                    let sorryStart = editorLine.indexOf('sorry');
+                    var end: number;
+                    if (sorryStart >= 0 && sorryStart > startcol) {
+                        end = sorryStart + 5;
+                    } else {
+                        end = startcol + method.length;
+                    }
+
+                    let timeregexp = /\((> )?[0-9]+(.[0-9]+)? m?s(, timed out)?\)/;
+                    for (var line of lines) {
+                        var title: String;
                         if (line.startsWith('Try this: ')) {
+                            title = `Replace ${method} with ${line}`;
                             line = line.replace(/Try this: /, '')
-                            line = line.replace(/\([0-9]+ ms\)/, '')
-                            actions.push(<CodeAction>{
-                                title: `Replace ${method} with ${line}`,
-                                kind: CodeActionKind.QuickFix,
-                                edit: {
-                                    documentChanges: [{
-                                        textDocument: {
-                                            uri: document.uri,
-                                            version: null,
-                                        },
-                                        edits: [{
-                                            newText: line,
-                                            range: {
-                                                start: {line: linenr, character: startcol},
-                                                end: {line: linenr, character: startcol + method.length},
-                                            },
-                                        }],
-                                    }],
-                                },
-                            })
                         } else if (line.includes('Try this:')) {
                             const prover = line.replace(/"([a-zA-Z0-9]*)":.*/, '$1')
                             line = line.replace(/.*Try this: /, '')
-                            actions.push(<CodeAction>{
-                                title: `${prover}: ${line}`,
-                                kind: CodeActionKind.Empty,
-                                edit: {
-                                    documentChanges: [{
-                                        textDocument: {
-                                            uri: document.uri,
-                                            version: null,
-                                        },
-                                        edits: [{
-                                            newText: line.replace(/\([0-9]+ ms\)/, ''),
-                                            range: {
-                                                start: {line: linenr, character: startcol},
-                                                end: {line: linenr, character: startcol + method.length},
-                                            },
-                                        }],
-                                    }],
-                                },
-                            })
+                            title = `${prover}: ${line}`;
+                        } else {
+                            continue;
                         }
+
+                        line = line.replace(timeregexp, '')
+
+                        actions.push(<CodeAction>{
+                            title: title,
+                            kind: CodeActionKind.QuickFix,
+                            edit: {
+                                documentChanges: [{
+                                    textDocument: {
+                                        uri: document.uri,
+                                        version: null,
+                                    },
+                                    edits: [{
+                                        newText: line,
+                                        range: {
+                                            start: {line: linenr, character: startcol},
+                                            end: {line: linenr, character: end},
+                                        },
+                                    }],
+                                }],
+                            },
+                        })
                     }
                     return actions
                 }
             }
 
-            if (line.includes('proof')) {
+            if (editorLine.includes('proof')) {
                 var ind = -1
                 for (const [i, l] of lines.entries()) {
                     if (l === 'Proof outline with cases:') {
@@ -138,8 +137,8 @@ export async function activate(context: ExtensionContext): Promise<void> {
                 }
 
                 lines.splice(0, ind + 1)
-                const whitesp = line.search(/\S/);
-                const expr: string = line.replace(/\s*proof\s*(\([^)]*\))/, '$1')
+                const whitesp = editorLine.search(/\S/);
+                const expr: string = editorLine.replace(/\s*proof\s*(\([^)]*\))/, '$1')
                 const action: CodeAction = {
                     title: `Insert proof outline for ${expr}`,
                     kind: CodeActionKind.QuickFix,
@@ -238,11 +237,12 @@ export async function activate(context: ExtensionContext): Promise<void> {
             })
         })
         client.onNotification("PIDE/progress", (params: Progress) => {
-            client.info('got dynamic output')
             var lines: string[] = []
             var errorRanges: Range[] = []
             var doneRanges: Range[] = []
-            for (const [i, dict] of params['nodes-status'].entries()) {
+            let status = params['nodes-status'] ?? params['nodes_status']
+            client.info(`  status: ${status}`)
+            for (const [i, dict] of status.entries()) {
                 // TODO: prettify
                 const name = dict.name.split(/[\\/]/).pop()?.split('.')[0] ?? 'undefined'
                 lines.push(name)
@@ -278,6 +278,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
                     })
                 }
             }
+            client.info(`  progress lines: ${lines}`)
             isaProgressBuffer.setLines(lines, {start: 0, end: -1})
             isaProgressBuffer.highlightRanges('-PROGRESS-', 'CocListFgRed', errorRanges)
             isaProgressBuffer.highlightRanges('-PROGRESS-', 'CocListFgGreen', doneRanges)

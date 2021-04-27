@@ -24,7 +24,8 @@ interface DecorationParams {
 }
 
 interface Progress {
-    'nodes-status': TheoryProgress[]
+    'nodes-status': TheoryProgress[],
+    'nodes_status': TheoryProgress[],
 }
 
 const decoration_types: string[] = [
