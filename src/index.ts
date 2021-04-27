@@ -76,23 +76,48 @@ export async function activate(context: ExtensionContext): Promise<void> {
 
                 if (startcol != -1) {
                     let sorryStart = editorLine.indexOf('sorry');
-                    var end: number;
+                    var endCol: number;
                     if (sorryStart >= 0 && sorryStart > startcol) {
-                        end = sorryStart + 5;
+                        endCol = sorryStart + 5;
                     } else {
-                        end = startcol + method.length;
+                        endCol = startcol + method.length;
                     }
 
                     let timeregexp = /\((> )?[0-9]+(.[0-9]+)? m?s(, timed out)?\)/;
-                    for (var line of lines) {
+                    var prover: String = '';
+                    var isarstart: number = -1;
+                    var isarend: number = -1;
+                    var isarproof: String = "";
+                    var endLineNr: number | undefined = undefined;
+                    for (var [i, line] of lines.entries()) {
                         var title: String;
                         if (line.startsWith('Try this: ')) {
                             title = `Replace ${method} with ${line}`;
                             line = line.replace(/Try this: /, '')
                         } else if (line.includes('Try this:')) {
-                            const prover = line.replace(/"([a-zA-Z0-9]*)":.*/, '$1')
+                            prover = line.replace(/"([a-zA-Z0-9]*)":.*/, '$1')
                             line = line.replace(/.*Try this: /, '')
                             title = `${prover}: ${line}`;
+                        } else if (line.includes('Isar proof')) {
+                            isarstart = i+1;
+                            isarproof = line.replace(/:/, '');
+                            continue;
+                        } else if (line === 'qed') {
+                            if (prover == '') {
+                                client.warn('isar proof but no prover');
+                                continue;
+                            }
+                            title = `${prover}: ${isarproof}`;
+                            isarend = i;
+                            if (isarstart == -1) {
+                                client.warn(`Got isarend but not isarstart.`)
+                                continue;
+                            }
+                            var newLines = lines.slice(isarstart, isarend+1);
+                            const whitesp = editorLine.search(/\S/);
+                            line = '\n' + newLines.map((x) => ' '.repeat(whitesp) + x).join('\n') + '\n';
+                            endLineNr = linenr+1;
+                            endCol = 0;
                         } else {
                             continue;
                         }
@@ -112,12 +137,19 @@ export async function activate(context: ExtensionContext): Promise<void> {
                                         newText: line,
                                         range: {
                                             start: {line: linenr, character: startcol},
-                                            end: {line: linenr, character: end},
+                                            end: {line: endLineNr ?? linenr, character: endCol},
                                         },
                                     }],
                                 }],
                             },
                         })
+
+                        if (isarend >= 0) {
+                            isarstart = -1;
+                            isarend = -1;
+                            endLineNr = undefined;
+                            prover = '';
+                        }
                     }
                     return actions
                 }
