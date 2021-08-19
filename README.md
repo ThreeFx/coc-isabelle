@@ -27,13 +27,14 @@ don't like having heavyweight plugin manager for a relatively simple task.
 
 All of this goes in your `coc-settings.json`.
 
-|Name|Type|Default|Description|
-|----|----|-------|-----------|
-| `isabelle.enable` | boolean | `true` | En/disables coc-isabelle. Requires a restart if changed |
-| `isabelle.command` | boolean | `"isabelle"` | The `isabelle` command to invoke. |
-| `isabelle.usePideExtensions` | boolean | `true` | Whether to use the VSCode PIDE extensions. This is used for dynamic syntax highlighting. |
-| `isabelle.debug` | boolean | `false` | Produce debug output. The output of the language server can be found under `/tmp/coc-isa`. |
-| `isabelle.extraArgs` | string[] | `[]` | Additional arguments to pass to the underlying `isabelle` process. |
+| Name                         | Type     | Default      | Description                                                                                |
+|------------------------------|----------|--------------|--------------------------------------------------------------------------------------------|
+| `isabelle.enable`            | boolean  | `true`       | En/disables coc-isabelle. Requires a restart if changed                                    |
+| `isabelle.command`           | boolean  | `"isabelle"` | The `isabelle` command to invoke.                                                          |
+| `isabelle.usePideExtensions` | boolean  | `true`       | Whether to use the VSCode PIDE extensions. This is used for dynamic syntax highlighting.   |
+| `isabelle.debug`             | boolean  | `false`      | Produce debug output. The output of the language server can be found under `/tmp/coc-isa`. |
+| `isabelle.extraArgs`         | string[] | `[]`         | Additional arguments to pass to the underlying `isabelle` process.                         |
+| `isabelle.useHtmlOutput`     | boolean  | `false`      | Whether to use the HTML output in the `-OUTPUT-` buffer                                    |
 
 ## License
 
