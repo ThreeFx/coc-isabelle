@@ -19,6 +19,10 @@ export async function activate(context: ExtensionContext): Promise<void> {
         extraArgs.push('-v', '-L', '/tmp/coc-isa')
     }
 
+    if (!config.get<boolean>('useHtmlOutput', false)) {
+        extraArgs.push('-o', 'vscode_html_output=false')
+    }
+
     const serverOptions: ServerOptions = {
         command: config.get<string>('command', 'isabelle'),
         args: ['vscode_server'].concat(extraArgs),
