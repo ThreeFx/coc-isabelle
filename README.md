@@ -13,6 +13,10 @@ the "manual" way (requires `yarn` in your path):
 Plug 'ThreeFx/coc-isabelle', {'do': 'yarn install --frozen-lockfile'}
 ```
 
+This plugin requires the
+[`isabelle-emacs`](https://github.com/m-fleury/isabelle-emacs) fork of
+[Isabelle](https://isabelle.in.tum.de).
+
 Syntax highlighting and window layout is provided by
 [`isabelle.vim`](https://github.com/ThreeFx/isabelle.vim). Install it using your
 favorite (vim) package manager.
